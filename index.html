@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="输入任意单量子比特酉矩阵，验证并可视化其 ZYZ 欧拉角分解。">
+  <meta name="theme-color" content="#07111f">
+  <title>Single-Qubit ZYZ Decomposition Visualizer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%2338d9c5' stroke-width='3'/%3E%3Cpath d='M10 32h44M32 10v44M19 46 45 18' stroke='%23b7f34b' stroke-width='3'/%3E%3Ccircle cx='45' cy='18' r='4' fill='%23b7f34b'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true">U</div>
+    <div>
+      <p class="eyebrow">QUANTUM WORKBENCH · 01</p>
+      <h1>Single-Qubit <span>ZYZ</span> Visualizer</h1>
+    </div>
+    <a class="formula-chip" href="#theory">U = e<sup>iδ</sup> R<sub>z</sub>(α) R<sub>y</sub>(β) R<sub>z</sub>(γ)</a>
+  </header>
+
+  <main>
+    <section class="workbench" aria-label="ZYZ decomposition workbench">
+      <article class="panel input-panel">
+        <div class="panel-heading">
+          <div><span class="section-index">01</span><h2>Matrix input</h2></div>
+          <span class="status-pill neutral" id="unitary-status">等待分析</span>
+        </div>
+        <p class="hint">输入复数或简单表达式，如 <code>0.5+0.5i</code>、<code>-i</code>、<code>1/sqrt(2)</code>。</p>
+        <div class="matrix-editor" aria-label="2 by 2 complex matrix">
+          <span class="matrix-name">U =</span>
+          <div class="matrix-bracket matrix-grid">
+            <label><span class="sr-only">u 0 0</span><input id="u00" value="1/sqrt(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 0 1</span><input id="u01" value="1/sqrt(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 1 0</span><input id="u10" value="1/sqrt(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 1 1</span><input id="u11" value="-1/sqrt(2)" autocomplete="off"></label>
+          </div>
+        </div>
+
+        <div class="control-label">PRESET GATES</div>
+        <div class="preset-grid" id="preset-gates" aria-label="Preset quantum gates"></div>
+        <div class="rotation-row">
+          <label for="rotation-angle">θ</label>
+          <input id="rotation-angle" value="pi/3" autocomplete="off" aria-label="Rotation angle">
+          <button class="mini-button" data-rotation="Rx">R<sub>x</sub></button>
+          <button class="mini-button" data-rotation="Ry">R<sub>y</sub></button>
+          <button class="mini-button" data-rotation="Rz">R<sub>z</sub></button>
+        </div>
+        <button class="primary-button" id="analyze-button"><span>Analyze decomposition</span><span aria-hidden="true">→</span></button>
+        <p class="error-message" id="input-error" role="alert" hidden></p>
+      </article>
+
+      <article class="panel results-panel">
+        <div class="panel-heading">
+          <div><span class="section-index">02</span><h2>Decomposition</h2></div>
+          <span class="status-pill neutral" id="verification-status">尚未验证</span>
+        </div>
+        <div class="angle-list" id="angle-list" aria-live="polite"></div>
+        <div class="error-readout">
+          <span>FROBENIUS ERROR</span>
+          <strong id="reconstruction-error">—</strong>
+        </div>
+        <div class="matrix-compare">
+          <div><span>INPUT · U</span><div class="matrix-output" id="matrix-original">—</div></div>
+          <div><span>RECONSTRUCTED · Ũ</span><div class="matrix-output" id="matrix-reconstructed">—</div></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel circuit-section">
+      <div class="panel-heading">
+        <div><span class="section-index">03</span><h2>Quantum circuit</h2></div>
+        <p class="hint">门按量子态实际经历的顺序排列</p>
+      </div>
+      <div class="circuit" id="circuit" aria-label="Quantum circuit"></div>
+    </section>
+
+    <section class="visual-section">
+      <article class="panel bloch-panel">
+        <div class="panel-heading">
+          <div><span class="section-index">04</span><h2>Bloch sphere</h2></div>
+          <div class="live-operation"><span></span><b id="current-operation">Initial state</b></div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="bloch-canvas" aria-label="Interactive Bloch sphere" tabindex="0"></canvas>
+          <div class="canvas-help">拖动旋转 · 滚轮缩放</div>
+          <div class="vector-readout" id="vector-readout">x 0.000 &nbsp; y 0.000 &nbsp; z 1.000</div>
+        </div>
+      </article>
+
+      <aside class="panel animation-panel">
+        <div class="panel-heading"><div><span class="section-index">05</span><h2>Rotation sequence</h2></div></div>
+        <label class="control-label" for="initial-state">INITIAL STATE</label>
+        <select id="initial-state">
+          <option value="zero">|0⟩</option><option value="one">|1⟩</option>
+          <option value="plus">|+⟩</option><option value="minus">|−⟩</option>
+          <option value="plus-i">|+i⟩</option><option value="minus-i">|−i⟩</option>
+          <option value="custom">自定义 θ, φ</option>
+        </select>
+        <div class="custom-state" id="custom-state" hidden>
+          <label>θ <input id="state-theta" value="pi/2"></label>
+          <label>φ <input id="state-phi" value="0"></label>
+        </div>
+        <ol class="sequence-list" id="sequence-list"></ol>
+        <div class="transport-controls">
+          <button id="previous-step" aria-label="Previous step">↶</button>
+          <button class="play-button" id="play-pause" aria-label="Play animation">▶</button>
+          <button id="next-step" aria-label="Next step">↷</button>
+          <button id="reset-animation">Reset</button>
+        </div>
+        <p class="phase-note"><span>δ</span> 全局相位不会改变 Bloch 球上的物理状态。</p>
+      </aside>
+    </section>
+
+    <section class="theory-section" id="theory">
+      <div class="theory-title"><span class="section-index">06</span><p class="eyebrow">MATHEMATICAL NOTES</p><h2>Why the decomposition works</h2></div>
+      <div class="theory-grid">
+        <article><span>01</span><h3>Unitarity</h3><p>量子演化必须保持内积与总概率，因此单量子比特门满足 U†U = I。满足条件的 2×2 复矩阵构成 U(2)。</p></article>
+        <article><span>02</span><h3>U(2) → SU(2)</h3><p>det(U)=e<sup>i2δ</sup>。提取 e<sup>iδ</sup> 后，V=e<sup>−iδ</sup>U 的行列式为 1，属于 SU(2)。δ 有分支歧义，但可由重构验证。</p></article>
+        <article><span>03</span><h3>ZYZ Euler angles</h3><p>任意 SU(2) 元素都可写成 R<sub>z</sub>(α)R<sub>y</sub>(β)R<sub>z</sub>(γ)。在 β=0 或 π 时角度不唯一，工具会固定一个冗余角。</p></article>
+        <article><span>04</span><h3>Right to left</h3><p>矩阵最右侧先作用，所以线路顺序是 R<sub>z</sub>(γ) → R<sub>y</sub>(β) → R<sub>z</sub>(α)。全局相位不改变测量概率，也不旋转 Bloch 向量。</p></article>
+      </div>
+    </section>
+  </main>
+  <footer><span>Single-Qubit ZYZ Decomposition Visualizer</span><span>Pure mathematics · Pure frontend</span></footer>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
