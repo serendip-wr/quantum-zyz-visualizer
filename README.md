@@ -135,3 +135,4 @@ npm test
 ## 浏览器支持
 
 建议使用近期版本的 Chrome、Edge、Firefox 或 Safari。页面使用 Canvas、ES modules、ResizeObserver 和 Pointer Events。
+
