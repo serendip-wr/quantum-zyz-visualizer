@@ -15,6 +15,25 @@ export function rx(theta) {
   return matrix2(c, new Complex(0, -s), new Complex(0, -s), c);
 }
 
+function normalizedAxis(axis) {
+  const source = Array.isArray(axis) ? { x: axis[0], y: axis[1], z: axis[2] } : axis;
+  const x = Number(source?.x), y = Number(source?.y), z = Number(source?.z);
+  const length = Math.hypot(x, y, z);
+  if (![x, y, z, length].every(Number.isFinite) || length < 1e-14) throw new Error('自定义旋转轴不能为零向量');
+  return { x: x / length, y: y / length, z: z / length };
+}
+
+export function rotationAroundAxis(nx, ny, nz, theta) {
+  const axis = normalizedAxis({ x: nx, y: ny, z: nz });
+  const c = Math.cos(theta / 2), s = Math.sin(theta / 2);
+  return matrix2(
+    new Complex(c, -axis.z * s),
+    new Complex(-axis.y * s, -axis.x * s),
+    new Complex(axis.y * s, -axis.x * s),
+    new Complex(c, axis.z * s)
+  );
+}
+
 export function composeZYZ({ delta, alpha, beta, gamma }) {
   const special = multiply2(rz(alpha), multiply2(ry(beta), rz(gamma)));
   return scale2(Complex.expi(delta), special);
@@ -36,9 +55,23 @@ export function blochVectorFromAngles(theta, phi) {
 }
 
 export function rotateVector(vector, axis, angle) {
+  const basis = {
+    x: { x: 1, y: 0, z: 0 },
+    y: { x: 0, y: 1, z: 0 },
+    z: { x: 0, y: 0, z: 1 }
+  };
+  if (typeof axis === 'string' && !basis[axis]) throw new Error(`Unknown rotation axis: ${axis}`);
+  const n = normalizedAxis(typeof axis === 'string' ? basis[axis] : axis);
   const { x, y, z } = vector, c = Math.cos(angle), s = Math.sin(angle);
-  if (axis === 'z') return { x: c * x - s * y, y: s * x + c * y, z };
-  if (axis === 'y') return { x: c * x + s * z, y, z: -s * x + c * z };
-  if (axis === 'x') return { x, y: c * y - s * z, z: s * y + c * z };
-  throw new Error(`Unknown rotation axis: ${axis}`);
+  const dot = n.x * x + n.y * y + n.z * z;
+  const cross = {
+    x: n.y * z - n.z * y,
+    y: n.z * x - n.x * z,
+    z: n.x * y - n.y * x
+  };
+  return {
+    x: x * c + cross.x * s + n.x * dot * (1 - c),
+    y: y * c + cross.y * s + n.y * dot * (1 - c),
+    z: z * c + cross.z * s + n.z * dot * (1 - c)
+  };
 }

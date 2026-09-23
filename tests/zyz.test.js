@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Complex, formatComplex, parseComplex } from '../js/complex.js';
 import { determinant2, identity2, isUnitary2, matrix2, matrixDistance2, multiply2, scale2 } from '../js/matrix.js';
-import { PRESET_GATES, composeZYZ, rx, ry, rz } from '../js/quantum.js';
+import { PRESET_GATES, composeZYZ, rotationAroundAxis, rotateVector, rx, ry, rz } from '../js/quantum.js';
 import { decomposeZYZ } from '../js/zyz.js';
 
 const TOL = 1e-8;
@@ -14,6 +14,9 @@ assert.ok(parseComplex('0.70710678i').equals(new Complex(0, .70710678)));
 assert.ok(Math.abs(parseComplex('1/sqrt(2)').re - 1 / Math.sqrt(2)) < 1e-12);
 assert.ok(parseComplex('0.5 − 0.5i').equals(new Complex(.5, -.5)), 'pasted mathematical minus sign should be accepted');
 assert.ok(parseComplex('0.5–0.5i').equals(new Complex(.5, -.5)), 'pasted en dash should be accepted');
+assert.ok(Math.abs(parseComplex('√(2)').re - Math.sqrt(2)) < 1e-12, 'square-root symbol should be accepted');
+assert.ok(Math.abs(parseComplex('π÷2').re - Math.PI / 2) < 1e-12, 'pi and division symbols should be accepted');
+assert.ok(parseComplex('(1+i)×(1-i)').equals(new Complex(2, 0)), 'multiplication symbol should be accepted');
 assert.ok(matrixDistance2(multiply2(PRESET_GATES.X, PRESET_GATES.X), identity2()) < TOL);
 assert.ok(determinant2(PRESET_GATES.S).equals(new Complex(0, 1), TOL));
 
@@ -43,6 +46,19 @@ for (let index = 0; index < 100; index += 1) {
   assert.ok(parseComplex(formatComplex(value, 10)).equals(value, 1e-9),
     `formatted complex sample ${index + 1} must be parseable`);
 }
+
+assert.ok(matrixDistance2(rotationAroundAxis(1, 0, 0, Math.PI / 3), rx(Math.PI / 3)) < TOL,
+  'custom x axis must agree with Rx');
+assert.ok(matrixDistance2(rotationAroundAxis(0, 2, 0, Math.PI / 4), ry(Math.PI / 4)) < TOL,
+  'custom axes must be normalized and agree with Ry');
+assert.ok(matrixDistance2(rotationAroundAxis(0, 0, -3, Math.PI / 5), rz(-Math.PI / 5)) < TOL,
+  'negative custom z axis must agree with the equivalent Rz');
+const arbitraryAxisGate = rotationAroundAxis(1, 2, -3, .73);
+assert.ok(isUnitary2(arbitraryAxisGate, TOL), 'arbitrary-axis rotation must be unitary');
+const arbitraryVector = rotateVector({ x: .2, y: -.3, z: Math.sqrt(.87) }, { x: 1, y: 2, z: -3 }, .73);
+assert.ok(Math.abs(Math.hypot(arbitraryVector.x, arbitraryVector.y, arbitraryVector.z) - 1) < TOL,
+  'arbitrary-axis Bloch rotation must preserve vector length');
+assert.throws(() => rotationAroundAxis(0, 0, 0, 1), /不能为零/, 'zero custom axis must be rejected');
 
 function verify(name, U) {
   assert.ok(isUnitary2(U, TOL), `${name} should be unitary`);

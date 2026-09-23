@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="输入任意单量子比特酉矩阵，验证并可视化其 ZYZ 欧拉角分解。">
+  <meta name="description" content="Analyze any single-qubit unitary matrix and visualize its ZYZ decomposition.">
   <meta name="theme-color" content="#07111f">
   <title>Single-Qubit ZYZ Decomposition Visualizer</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%2338d9c5' stroke-width='3'/%3E%3Cpath d='M10 32h44M32 10v44M19 46 45 18' stroke='%23b7f34b' stroke-width='3'/%3E%3Ccircle cx='45' cy='18' r='4' fill='%23b7f34b'/%3E%3C/svg%3E">
@@ -13,116 +13,150 @@
   <header class="topbar">
     <div class="brand-mark" aria-hidden="true">U</div>
     <div>
-      <p class="eyebrow">QUANTUM WORKBENCH · 01</p>
-      <h1>Single-Qubit <span>ZYZ</span> Visualizer</h1>
+      <p class="eyebrow" data-i18n="workbenchEyebrow">QUANTUM WORKBENCH · 01</p>
+      <h1 data-i18n-html="headerTitle">Single-Qubit <span>ZYZ</span> Visualizer</h1>
     </div>
     <a class="formula-chip" href="#theory">U = e<sup>iδ</sup> R<sub>z</sub>(α) R<sub>y</sub>(β) R<sub>z</sub>(γ)</a>
+    <button id="language-toggle" class="language-toggle" type="button" aria-label="Switch interface to Chinese">中文</button>
   </header>
 
   <main>
-    <section class="workbench" aria-label="ZYZ decomposition workbench">
+    <section class="workbench" aria-label="ZYZ decomposition workbench" data-i18n-aria="workbenchAria">
       <article class="panel input-panel">
         <div class="panel-heading">
-          <div><span class="section-index">01</span><h2>Matrix input</h2></div>
-          <span class="status-pill neutral" id="unitary-status">等待分析</span>
+          <div><span class="section-index">01</span><h2 data-i18n="matrixInput">Matrix input</h2></div>
+          <span class="status-pill neutral" id="unitary-status">Awaiting analysis</span>
         </div>
-        <p class="hint">输入复数或简单表达式，如 <code>0.5+0.5i</code>、<code>-i</code>、<code>1/sqrt(2)</code>。</p>
-        <div class="matrix-editor" aria-label="2 by 2 complex matrix">
+        <p class="hint" data-i18n-html="inputHint">Enter complex numbers or expressions, such as <code>0.5+0.5i</code>, <code>-i</code>, <code>π/2</code>, or <code>1/√(2)</code>.</p>
+        <div class="matrix-editor" aria-label="2 by 2 complex matrix" data-i18n-aria="matrixEditorAria">
           <span class="matrix-name">U =</span>
           <div class="matrix-bracket matrix-grid">
-            <label><span class="sr-only">u 0 0</span><input id="u00" value="1/sqrt(2)" autocomplete="off"></label>
-            <label><span class="sr-only">u 0 1</span><input id="u01" value="1/sqrt(2)" autocomplete="off"></label>
-            <label><span class="sr-only">u 1 0</span><input id="u10" value="1/sqrt(2)" autocomplete="off"></label>
-            <label><span class="sr-only">u 1 1</span><input id="u11" value="-1/sqrt(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 0 0</span><input class="expression-input" data-input-label="u₀₀" id="u00" value="1/√(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 0 1</span><input class="expression-input" data-input-label="u₀₁" id="u01" value="1/√(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 1 0</span><input class="expression-input" data-input-label="u₁₀" id="u10" value="1/√(2)" autocomplete="off"></label>
+            <label><span class="sr-only">u 1 1</span><input class="expression-input" data-input-label="u₁₁" id="u11" value="-1/√(2)" autocomplete="off"></label>
           </div>
         </div>
 
-        <div class="control-label">PRESET GATES</div>
-        <div class="preset-grid" id="preset-gates" aria-label="Preset quantum gates"></div>
+        <div class="input-assistant" aria-label="Math input helper" data-i18n-aria="inputHelper">
+          <div class="assistant-heading"><span data-i18n="inputHelper">Math input helper</span><small id="assistant-target">Editing: u₀₀</small></div>
+          <div class="assistant-keys">
+            <button type="button" data-insert="π">π</button>
+            <button type="button" data-template="sqrt">√</button>
+            <button type="button" data-insert="i">i</button>
+            <button type="button" data-insert="+">+</button>
+            <button type="button" data-insert="−">−</button>
+            <button type="button" data-insert="×">×</button>
+            <button type="button" data-insert="÷">÷</button>
+            <button type="button" data-insert="(">(</button>
+            <button type="button" data-insert=")">)</button>
+            <button type="button" data-action="backspace" aria-label="Delete previous character" data-i18n-aria="backspace">⌫</button>
+          </div>
+        </div>
+
+        <div class="control-label" data-i18n="presetGates">PRESET GATES</div>
+        <div class="preset-grid" id="preset-gates" aria-label="Preset quantum gates" data-i18n-aria="presetGatesAria"></div>
         <div class="rotation-row">
           <label for="rotation-angle">θ</label>
-          <input id="rotation-angle" value="pi/3" autocomplete="off" aria-label="Rotation angle">
+          <input class="expression-input" data-input-label="Rotation angle θ" data-input-label-key="rotationAngle" id="rotation-angle" value="π/3" autocomplete="off" aria-label="Rotation angle" data-i18n-aria="rotationAngle">
           <button class="mini-button" data-rotation="Rx">R<sub>x</sub></button>
           <button class="mini-button" data-rotation="Ry">R<sub>y</sub></button>
           <button class="mini-button" data-rotation="Rz">R<sub>z</sub></button>
         </div>
-        <button class="primary-button" id="analyze-button"><span>Analyze decomposition</span><span aria-hidden="true">→</span></button>
+        <div class="custom-axis-card">
+          <div class="custom-axis-heading"><span class="control-label" data-i18n="customAxisTitle">CUSTOM AXIS ROTATION</span><small data-i18n="axisNormalize">Axis vector is normalized automatically</small></div>
+          <div class="custom-axis-grid">
+            <label>n<sub>x</sub><input class="expression-input" data-input-label="Axis nₓ" data-input-label-key="axisX" id="axis-x" value="1" autocomplete="off"></label>
+            <label>n<sub>y</sub><input class="expression-input" data-input-label="Axis nᵧ" data-input-label-key="axisY" id="axis-y" value="1" autocomplete="off"></label>
+            <label>n<sub>z</sub><input class="expression-input" data-input-label="Axis n_z" data-input-label-key="axisZ" id="axis-z" value="0" autocomplete="off"></label>
+            <label>θ<input class="expression-input" data-input-label="Custom axis angle θ" data-input-label-key="customAxisAngle" id="axis-angle" value="π/3" autocomplete="off"></label>
+            <button type="button" class="custom-axis-button" id="custom-axis-button" data-i18n-html="generateRn">Generate R<sub>n</sub></button>
+          </div>
+        </div>
+        <button class="primary-button" id="analyze-button"><span data-i18n="analyze">Analyze decomposition</span><span aria-hidden="true">→</span></button>
         <p class="error-message" id="input-error" role="alert" hidden></p>
       </article>
 
       <article class="panel results-panel">
         <div class="panel-heading">
-          <div><span class="section-index">02</span><h2>Decomposition</h2></div>
-          <span class="status-pill neutral" id="verification-status">尚未验证</span>
+          <div><span class="section-index">02</span><h2 data-i18n="decomposition">Decomposition</h2></div>
+          <span class="status-pill neutral" id="verification-status">Not verified</span>
         </div>
         <div class="angle-list" id="angle-list" aria-live="polite"></div>
         <div class="error-readout">
-          <span>FROBENIUS ERROR</span>
+          <span data-i18n="frobeniusError">FROBENIUS ERROR</span>
           <strong id="reconstruction-error">—</strong>
         </div>
         <div class="matrix-compare">
-          <div><span>INPUT · U</span><div class="matrix-output" id="matrix-original">—</div></div>
-          <div><span>RECONSTRUCTED · Ũ</span><div class="matrix-output" id="matrix-reconstructed">—</div></div>
+          <div><span data-i18n="inputMatrix">INPUT · U</span><div class="matrix-output" id="matrix-original">—</div></div>
+          <div><span data-i18n="reconstructedMatrix">RECONSTRUCTED · Ũ</span><div class="matrix-output" id="matrix-reconstructed">—</div></div>
         </div>
       </article>
     </section>
 
     <section class="panel circuit-section">
       <div class="panel-heading">
-        <div><span class="section-index">03</span><h2>Quantum circuit</h2></div>
-        <p class="hint">门按量子态实际经历的顺序排列</p>
+        <div><span class="section-index">03</span><h2 data-i18n="quantumCircuit">Quantum circuit</h2></div>
+        <p class="hint" data-i18n="circuitHint">Gates appear in the order applied to the state</p>
       </div>
-      <div class="circuit" id="circuit" aria-label="Quantum circuit"></div>
+      <div class="circuit" id="circuit" aria-label="Quantum circuit" data-i18n-aria="quantumCircuit"></div>
     </section>
 
     <section class="visual-section">
       <article class="panel bloch-panel">
         <div class="panel-heading">
-          <div><span class="section-index">04</span><h2>Bloch sphere</h2></div>
+          <div><span class="section-index">04</span><h2 data-i18n="blochSphere">Bloch sphere</h2></div>
           <div class="live-operation"><span></span><b id="current-operation">Initial state</b></div>
         </div>
         <div class="canvas-wrap">
-          <canvas id="bloch-canvas" aria-label="Interactive Bloch sphere" tabindex="0"></canvas>
-          <div class="canvas-help">拖动旋转 · 滚轮缩放</div>
+          <canvas id="bloch-canvas" aria-label="Interactive Bloch sphere" data-i18n-aria="blochCanvasAria" tabindex="0"></canvas>
+          <div class="canvas-help" data-i18n="canvasHelp">Drag to rotate · Scroll to zoom</div>
           <div class="vector-readout" id="vector-readout">x 0.000 &nbsp; y 0.000 &nbsp; z 1.000</div>
         </div>
       </article>
 
       <aside class="panel animation-panel">
-        <div class="panel-heading"><div><span class="section-index">05</span><h2>Rotation sequence</h2></div></div>
-        <label class="control-label" for="initial-state">INITIAL STATE</label>
+        <div class="panel-heading"><div><span class="section-index">05</span><h2 data-i18n="rotationSequence">Rotation sequence</h2></div></div>
+        <div id="animation-mode-group" hidden>
+          <label class="control-label" for="animation-mode" data-i18n="animationPath">ANIMATION PATH</label>
+          <select id="animation-mode">
+            <option value="zyz" data-i18n="zyzPath">ZYZ decomposition</option>
+            <option value="custom" data-i18n="customPath">Direct custom-axis rotation</option>
+          </select>
+        </div>
+        <label class="control-label" for="initial-state" data-i18n="initialState">INITIAL STATE</label>
         <select id="initial-state">
           <option value="zero">|0⟩</option><option value="one">|1⟩</option>
           <option value="plus">|+⟩</option><option value="minus">|−⟩</option>
           <option value="plus-i">|+i⟩</option><option value="minus-i">|−i⟩</option>
-          <option value="custom">自定义 θ, φ</option>
+          <option value="custom" data-i18n="customState">Custom θ, φ</option>
         </select>
         <div class="custom-state" id="custom-state" hidden>
-          <label>θ <input id="state-theta" value="pi/2"></label>
-          <label>φ <input id="state-phi" value="0"></label>
+          <label>θ <input class="expression-input" data-input-label="State θ" data-input-label-key="stateTheta" id="state-theta" value="π/2"></label>
+          <label>φ <input class="expression-input" data-input-label="State φ" data-input-label-key="statePhi" id="state-phi" value="0"></label>
         </div>
         <ol class="sequence-list" id="sequence-list"></ol>
         <div class="transport-controls">
-          <button id="previous-step" aria-label="Previous step">↶</button>
+          <button id="previous-step" aria-label="Previous step" data-i18n-aria="previousStep">↶</button>
           <button class="play-button" id="play-pause" aria-label="Play animation">▶</button>
-          <button id="next-step" aria-label="Next step">↷</button>
-          <button id="reset-animation">Reset</button>
+          <button id="next-step" aria-label="Next step" data-i18n-aria="nextStep">↷</button>
+          <button id="reset-animation" data-i18n="reset">Reset</button>
         </div>
-        <p class="phase-note"><span>δ</span> 全局相位不会改变 Bloch 球上的物理状态。</p>
+        <p class="phase-note"><span>δ</span> <span data-i18n="phaseNote">Global phase does not change the physical state on the Bloch sphere.</span></p>
       </aside>
     </section>
 
     <section class="theory-section" id="theory">
-      <div class="theory-title"><span class="section-index">06</span><p class="eyebrow">MATHEMATICAL NOTES</p><h2>Why the decomposition works</h2></div>
+      <div class="theory-title"><span class="section-index">06</span><p class="eyebrow" data-i18n="mathNotes">MATHEMATICAL NOTES</p><h2 data-i18n="whyWorks">Why the decomposition works</h2></div>
       <div class="theory-grid">
-        <article><span>01</span><h3>Unitarity</h3><p>量子演化必须保持内积与总概率，因此单量子比特门满足 U†U = I。满足条件的 2×2 复矩阵构成 U(2)。</p></article>
-        <article><span>02</span><h3>U(2) → SU(2)</h3><p>det(U)=e<sup>i2δ</sup>。提取 e<sup>iδ</sup> 后，V=e<sup>−iδ</sup>U 的行列式为 1，属于 SU(2)。δ 有分支歧义，但可由重构验证。</p></article>
-        <article><span>03</span><h3>ZYZ Euler angles</h3><p>任意 SU(2) 元素都可写成 R<sub>z</sub>(α)R<sub>y</sub>(β)R<sub>z</sub>(γ)。在 β=0 或 π 时角度不唯一，工具会固定一个冗余角。</p></article>
-        <article><span>04</span><h3>Right to left</h3><p>矩阵最右侧先作用，所以线路顺序是 R<sub>z</sub>(γ) → R<sub>y</sub>(β) → R<sub>z</sub>(α)。全局相位不改变测量概率，也不旋转 Bloch 向量。</p></article>
+        <article><span>01</span><h3 data-i18n="unitarityTitle">Unitarity</h3><p data-i18n-html="unitarityText">Quantum evolution preserves inner products and total probability, so a single-qubit gate obeys U†U = I. These 2×2 complex matrices form U(2).</p></article>
+        <article><span>02</span><h3 data-i18n="su2Title">U(2) → SU(2)</h3><p data-i18n-html="su2Text">Because det(U)=e<sup>i2δ</sup>, removing e<sup>iδ</sup> gives V=e<sup>−iδ</sup>U with determinant 1. The phase has multiple valid branches, checked by reconstruction.</p></article>
+        <article><span>03</span><h3 data-i18n="eulerTitle">ZYZ Euler angles</h3><p data-i18n-html="eulerText">Every SU(2) matrix can be written as R<sub>z</sub>(α)R<sub>y</sub>(β)R<sub>z</sub>(γ). At β=0 or π the angles are not unique; the tool fixes one redundant angle.</p></article>
+        <article><span>04</span><h3 data-i18n="orderTitle">Right to left</h3><p data-i18n-html="orderText">The rightmost matrix acts first, so the circuit runs R<sub>z</sub>(γ) → R<sub>y</sub>(β) → R<sub>z</sub>(α). Global phase changes neither probabilities nor Bloch vectors.</p></article>
       </div>
     </section>
   </main>
-  <footer><span>Single-Qubit ZYZ Decomposition Visualizer</span><span>Pure mathematics · Pure frontend</span></footer>
+  <footer><span data-i18n="footerName">Single-Qubit ZYZ Decomposition Visualizer</span><span data-i18n="footerTag">Pure mathematics · Pure frontend</span></footer>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

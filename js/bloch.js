@@ -1,6 +1,6 @@
 import { rotateVector } from './quantum.js';
 
-const COLORS = { x: '#ff7b88', y: '#43dfd0', z: '#b7f34b' };
+const COLORS = { x: '#ff7b88', y: '#43dfd0', z: '#b7f34b', custom: '#ffb657' };
 
 export class BlochRenderer {
   constructor(canvas) {
@@ -122,6 +122,17 @@ export class BlochRenderer {
     }
   }
 
+  drawCustomAxis(axis) {
+    const length = Math.hypot(axis.x, axis.y, axis.z) || 1;
+    const unit = { x: axis.x / length, y: axis.y / length, z: axis.z / length };
+    const start = { x: -unit.x * 1.24, y: -unit.y * 1.24, z: -unit.z * 1.24 };
+    const end = { x: unit.x * 1.24, y: unit.y * 1.24, z: unit.z * 1.24 };
+    this.path([start, end], COLORS.custom, 2.5, .98);
+    const p = this.project(end), ctx = this.ctx;
+    ctx.save(); ctx.fillStyle = COLORS.custom; ctx.font = '700 12px Cascadia Code, monospace';
+    ctx.fillText('n', p.x + 7, p.y - 6); ctx.restore();
+  }
+
   drawArrow(vector) {
     const origin = this.project({ x: 0, y: 0, z: 0 }), end = this.project(vector);
     const ctx = this.ctx, angle = Math.atan2(end.y - origin.y, end.x - origin.x);
@@ -143,7 +154,9 @@ export class BlochRenderer {
     ctx.strokeStyle = '#31596b'; ctx.lineWidth = 1.2; ctx.stroke();
     this.drawGrid();
     ['x', 'y', 'z'].forEach(axis => this.drawAxis(axis));
-    if (this.trajectory.length > 1) this.path(this.trajectory, this.activeAxis ? COLORS[this.activeAxis] : '#43dfd0', 2.2, .9);
+    if (this.activeAxis && typeof this.activeAxis !== 'string') this.drawCustomAxis(this.activeAxis);
+    const activeColor = typeof this.activeAxis === 'string' ? COLORS[this.activeAxis] : this.activeAxis ? COLORS.custom : '#43dfd0';
+    if (this.trajectory.length > 1) this.path(this.trajectory, activeColor, 2.2, .9);
     this.drawArrow(this.vector);
   }
 }
@@ -162,11 +175,14 @@ export class RotationAnimator {
 
   setInitial(vector) { this.initial = vector; this.reset(); }
   setAngles({ gamma, beta, alpha }) {
-    this.steps = [
+    this.setSteps([
       { axis: 'z', angle: gamma, label: 'Rz(γ)' },
       { axis: 'y', angle: beta, label: 'Ry(β)' },
       { axis: 'z', angle: alpha, label: 'Rz(α)' }
-    ];
+    ]);
+  }
+  setSteps(steps) {
+    this.steps = steps.map(step => ({ ...step }));
     this.reset();
   }
   pause() { this.playing = false; cancelAnimationFrame(this.frame); this.render(); }

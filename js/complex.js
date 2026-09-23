@@ -29,7 +29,10 @@ class ExpressionParser {
       .normalize('NFKC')
       .toLowerCase()
       .replaceAll('π', 'pi')
+      .replaceAll('√', 'sqrt')
       .replace(/[−–—﹣]/g, '-')
+      .replace(/[×·]/g, '*')
+      .replaceAll('÷', '/')
       .replace(/\s+/g, '');
     this.pos = 0;
   }
