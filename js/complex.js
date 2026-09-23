@@ -24,7 +24,15 @@ export class Complex {
 }
 
 class ExpressionParser {
-  constructor(source) { this.source = source.toLowerCase().replaceAll('π', 'pi').replace(/\s+/g, ''); this.pos = 0; }
+  constructor(source) {
+    this.source = String(source)
+      .normalize('NFKC')
+      .toLowerCase()
+      .replaceAll('π', 'pi')
+      .replace(/[−–—﹣]/g, '-')
+      .replace(/\s+/g, '');
+    this.pos = 0;
+  }
   parse() {
     if (!this.source) throw new Error('表达式不能为空');
     const value = this.expression();
@@ -89,5 +97,5 @@ export function formatComplex(z, digits = 6) {
   const number = n => Number(n.toFixed(digits)).toString();
   if (im === 0) return number(re);
   if (re === 0) return `${im === -1 ? '-' : im === 1 ? '' : number(im)}i`;
-  return `${number(re)} ${im < 0 ? '−' : '+'} ${Math.abs(im) === 1 ? '' : number(Math.abs(im))}i`;
+  return `${number(re)} ${im < 0 ? '-' : '+'} ${Math.abs(im) === 1 ? '' : number(Math.abs(im))}i`;
 }

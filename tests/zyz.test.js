@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { Complex, parseComplex } from '../js/complex.js';
-import { determinant2, identity2, isUnitary2, matrixDistance2, multiply2, scale2 } from '../js/matrix.js';
+import { Complex, formatComplex, parseComplex } from '../js/complex.js';
+import { determinant2, identity2, isUnitary2, matrix2, matrixDistance2, multiply2, scale2 } from '../js/matrix.js';
 import { PRESET_GATES, composeZYZ, rx, ry, rz } from '../js/quantum.js';
 import { decomposeZYZ } from '../js/zyz.js';
 
@@ -12,8 +12,37 @@ assert.ok(parseComplex('-i').equals(new Complex(0, -1)));
 assert.ok(parseComplex('0.5+0.5i').equals(new Complex(.5, .5)));
 assert.ok(parseComplex('0.70710678i').equals(new Complex(0, .70710678)));
 assert.ok(Math.abs(parseComplex('1/sqrt(2)').re - 1 / Math.sqrt(2)) < 1e-12);
+assert.ok(parseComplex('0.5 − 0.5i').equals(new Complex(.5, -.5)), 'pasted mathematical minus sign should be accepted');
+assert.ok(parseComplex('0.5–0.5i').equals(new Complex(.5, -.5)), 'pasted en dash should be accepted');
 assert.ok(matrixDistance2(multiply2(PRESET_GATES.X, PRESET_GATES.X), identity2()) < TOL);
 assert.ok(determinant2(PRESET_GATES.S).equals(new Complex(0, 1), TOL));
+
+function roundTripThroughMatrixInputs(matrix) {
+  const values = matrix.flat().map(value => parseComplex(formatComplex(value, 10)));
+  return matrix2(...values);
+}
+
+assert.ok(matrixDistance2(roundTripThroughMatrixInputs(rz(Math.PI / 3)), rz(Math.PI / 3)) < TOL,
+  'Rz(pi/3) must survive the same format → input parse round trip used by the UI');
+
+const generatedInputCases = [
+  ...Object.entries(PRESET_GATES),
+  ['Rx(pi/3)', rx(Math.PI / 3)], ['Rx(-pi/3)', rx(-Math.PI / 3)],
+  ['Ry(pi/4)', ry(Math.PI / 4)], ['Ry(-pi/4)', ry(-Math.PI / 4)],
+  ['Rz(pi/5)', rz(Math.PI / 5)], ['Rz(-pi/5)', rz(-Math.PI / 5)]
+];
+for (const [name, matrix] of generatedInputCases) {
+  assert.ok(matrixDistance2(roundTripThroughMatrixInputs(matrix), matrix) < TOL,
+    `${name} must survive the UI format → input parse round trip`);
+}
+
+for (let index = 0; index < 100; index += 1) {
+  const re = Math.sin(index * 1.7) * 10;
+  const im = Math.cos(index * 2.3) * 10;
+  const value = new Complex(re, im);
+  assert.ok(parseComplex(formatComplex(value, 10)).equals(value, 1e-9),
+    `formatted complex sample ${index + 1} must be parseable`);
+}
 
 function verify(name, U) {
   assert.ok(isUnitary2(U, TOL), `${name} should be unitary`);
