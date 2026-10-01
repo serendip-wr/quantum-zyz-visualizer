@@ -159,6 +159,10 @@ input:focus, select:focus { border-color: var(--cyan); }
 .canvas-wrap { height: min(66vw, 610px); min-height: 460px; position: relative; background: radial-gradient(circle at 50% 44%, rgba(28, 77, 91, .16), transparent 45%), #06101b; border: 1px solid var(--line); overflow: hidden; }
 #bloch-canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #bloch-canvas:active { cursor: grabbing; }
+.orbit-legend { position: absolute; top: 13px; left: 15px; display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 7px 10px; border: 1px solid var(--line); background: rgba(4, 12, 20, .84); color: #c5d2d9; font-size: .7rem; pointer-events: none; }
+.orbit-legend > span { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.orbit-swatch { display: inline-block; width: 24px; height: 0; border-top: 2px solid #ffb657; }
+.orbit-swatch.full { opacity: .6; border-top-style: dashed; }
 .canvas-help, .vector-readout { position: absolute; bottom: 13px; color: var(--muted); font-size: .7rem; pointer-events: none; }
 .canvas-help { left: 15px; }
 .vector-readout { right: 15px; padding: 7px 10px; border: 1px solid var(--line); background: rgba(4, 12, 20, .8); font-family: "Cascadia Code", monospace; }
@@ -181,6 +185,7 @@ input:focus, select:focus { border-color: var(--cyan); }
 .sequence-list li.done { opacity: .55; }
 .transport-controls { margin-top: auto; display: grid; grid-template-columns: 45px 50px 45px 1fr; gap: 8px; }
 .transport-controls .play-button { border-color: var(--lime); color: var(--lime); }
+.transport-controls button:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; transform: none; }
 .phase-note { margin: 18px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
 .phase-note > span:first-child { float: left; display: grid; place-items: center; margin-right: 9px; width: 28px; height: 28px; color: var(--cyan); border: 1px solid var(--line-bright); border-radius: 50%; font-family: Georgia, serif; }
 

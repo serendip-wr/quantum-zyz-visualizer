@@ -2,6 +2,16 @@ import { rotateVector } from './quantum.js';
 
 const COLORS = { x: '#ff7b88', y: '#43dfd0', z: '#b7f34b', custom: '#ffb657' };
 
+export function rotationOrbit(vector, axis, samples = 128) {
+  const length = Math.hypot(axis.x, axis.y, axis.z);
+  const unit = { x: axis.x / length, y: axis.y / length, z: axis.z / length };
+  const parallel = unit.x * vector.x + unit.y * vector.y + unit.z * vector.z;
+  const radius = Math.hypot(vector.x - parallel * unit.x, vector.y - parallel * unit.y, vector.z - parallel * unit.z);
+  // A state on the rotation axis remains fixed; its orbit is a point, not a circle.
+  if (radius < 1e-10) return [];
+  return Array.from({ length: samples + 1 }, (_, index) => rotateVector(vector, unit, 2 * Math.PI * index / samples));
+}
+
 export class BlochRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -11,6 +21,7 @@ export class BlochRenderer {
     this.zoom = 1;
     this.vector = { x: 0, y: 0, z: 1 };
     this.trajectory = [];
+    this.orbit = [];
     this.activeAxis = null;
     this.drag = null;
     this.bindInteractions();
@@ -59,10 +70,11 @@ export class BlochRenderer {
     });
   }
 
-  setScene(vector, trajectory = [], activeAxis = null) {
+  setScene(vector, trajectory = [], activeAxis = null, orbit = []) {
     this.vector = vector;
     this.trajectory = trajectory;
     this.activeAxis = activeAxis;
+    this.orbit = orbit;
     this.draw();
   }
 
@@ -80,12 +92,12 @@ export class BlochRenderer {
     return { x: this.width / 2 + p.x * radius, y: this.height / 2 - p.z * radius, depth: p.y, radius };
   }
 
-  path(points, stroke, width = 1, alpha = 1) {
+  path(points, stroke, width = 1, alpha = 1, dash = []) {
     if (points.length < 2) return;
     const ctx = this.ctx;
     ctx.save(); ctx.beginPath();
     points.forEach((point, i) => { const p = this.project(point); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
-    ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.globalAlpha = alpha; ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.globalAlpha = alpha; ctx.setLineDash(dash); ctx.stroke(); ctx.restore();
   }
 
   drawGrid() {
@@ -156,6 +168,7 @@ export class BlochRenderer {
     ['x', 'y', 'z'].forEach(axis => this.drawAxis(axis));
     if (this.activeAxis && typeof this.activeAxis !== 'string') this.drawCustomAxis(this.activeAxis);
     const activeColor = typeof this.activeAxis === 'string' ? COLORS[this.activeAxis] : this.activeAxis ? COLORS.custom : '#43dfd0';
+    if (this.orbit.length > 1) this.path(this.orbit, COLORS.custom, 1.6, .55, [6, 5]);
     if (this.trajectory.length > 1) this.path(this.trajectory, activeColor, 2.2, .9);
     this.drawArrow(this.vector);
   }
@@ -228,12 +241,23 @@ export class RotationAnimator {
       for (let i = 1; i <= samples; i += 1) trajectory.push(rotateVector(start, operation.axis, operation.angle * fraction * i / samples));
       vector = rotateVector(start, operation.axis, operation.angle * fraction);
     });
-    return { vector, trajectory, active: this.step < this.steps.length ? this.steps[this.step] : null };
+    const customAxis = this.steps.length === 1 && typeof this.steps[0].axis === 'object' ? this.steps[0].axis : null;
+    return {
+      vector, trajectory,
+      orbit: customAxis ? rotationOrbit(this.initial, customAxis) : [],
+      active: this.step < this.steps.length ? this.steps[this.step] : null,
+      displayAxis: customAxis ?? (this.step < this.steps.length ? this.steps[this.step].axis : null)
+    };
   }
   render() {
-    if (!this.steps.length) return this.renderer.setScene(this.initial, [this.initial], null);
+    if (!this.steps.length) {
+      const state = { vector: this.initial, trajectory: [this.initial], orbit: [], active: null, noSteps: true, step: 0, progress: 0, playing: false };
+      this.renderer.setScene(state.vector, state.trajectory, null);
+      this.onUpdate?.(state);
+      return;
+    }
     const state = this.state();
-    this.renderer.setScene(state.vector, state.trajectory, state.active?.axis ?? null);
+    this.renderer.setScene(state.vector, state.trajectory, state.displayAxis, state.orbit);
     this.onUpdate?.({ ...state, step: this.step, progress: this.progress, playing: this.playing });
   }
 }

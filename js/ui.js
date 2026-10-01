@@ -34,15 +34,26 @@ function initialVector() {
 }
 
 let rawInputError = null;
-function clearError() { rawInputError = null; $('#input-error').hidden = true; }
+const inputErrors = { matrix: null, state: null };
+function renderInputError() {
+  rawInputError = inputErrors.matrix ?? inputErrors.state;
+  const element = $('#input-error');
+  element.hidden = !rawInputError;
+  if (rawInputError) element.textContent = localizeError(rawInputError);
+}
+function clearError(source = null) {
+  if (source) inputErrors[source] = null;
+  else { inputErrors.matrix = null; inputErrors.state = null; }
+  renderInputError();
+}
 function updateAnimatorState(animator) {
-  try { animator.setInitial(initialVector()); clearError(); }
-  catch (error) { showError(error.message); }
+  try { animator.setInitial(initialVector()); clearError('state'); }
+  catch (error) { showError(error.message, 'state'); }
 }
 
-function showError(message) {
-  rawInputError = message;
-  const element = $('#input-error'); element.textContent = localizeError(message); element.hidden = false;
+function showError(message, source = 'matrix') {
+  inputErrors[source] = message;
+  renderInputError();
 }
 
 function setStatus(element, text, kind) { element.textContent = text; element.className = `status-pill ${kind}`; }
@@ -79,12 +90,14 @@ function renderCustomSequence(rotation) {
 let lastAnimationState = null;
 function updateAnimationUI(state) {
   lastAnimationState = state;
+  $('#orbit-legend').hidden = state.orbit.length < 2;
+  document.querySelectorAll('.transport-controls button').forEach(button => { button.disabled = Boolean(state.noSteps); });
   const items = [...document.querySelectorAll('#sequence-list li')];
   items.forEach((item, index) => {
     item.classList.toggle('done', index < state.step);
     item.classList.toggle('active', index === state.step && state.step < items.length);
   });
-  $('#current-operation').textContent = state.active ? `${state.active.label} · ${angleText(state.active.angle * state.progress).degrees}` : t('finalOperation');
+  $('#current-operation').textContent = state.noSteps ? t('initialOperation') : state.active ? `${state.active.label} · ${angleText(state.active.angle * state.progress).degrees}` : t('finalOperation');
   $('#play-pause').textContent = state.playing ? '❚❚' : '▶';
   $('#play-pause').setAttribute('aria-label', t(state.playing ? 'pause' : 'play'));
   const { x, y, z } = state.vector;
@@ -98,6 +111,16 @@ export function initializeUI() {
   let lastResult = null;
   let customRotation = null;
   let analysisState = 'waiting';
+
+  function clearAnalysisVisuals(circuitMessage) {
+    lastResult = null;
+    $('#angle-list').replaceChildren();
+    $('#matrix-reconstructed').textContent = '—';
+    $('#reconstruction-error').textContent = '—';
+    $('#circuit').innerHTML = `<span class="hint">${circuitMessage}</span>`;
+    $('#sequence-list').replaceChildren();
+    animator.setSteps([]);
+  }
 
   function renderAnalysisStatus() {
     const unitaryStatus = $('#unitary-status');
@@ -122,7 +145,7 @@ export function initializeUI() {
     applyLanguage();
     renderAnalysisStatus();
     if (lastResult) renderAngles(lastResult);
-    if (analysisState === 'nonunitary') $('#circuit').innerHTML = `<span class="hint">${t('noCircuit')}</span>`;
+    if (analysisState === 'nonunitary' || analysisState === 'invalid') $('#circuit').innerHTML = `<span class="hint">${t(analysisState === 'invalid' ? 'invalidCircuit' : 'noCircuit')}</span>`;
     if (rawInputError) $('#input-error').textContent = localizeError(rawInputError);
     if (activeExpressionInput) $('#assistant-target').textContent = t('editing', { field: activeExpressionInput.dataset.inputLabel || activeExpressionInput.id });
     if (lastAnimationState) updateAnimationUI(lastAnimationState);
@@ -229,14 +252,10 @@ export function initializeUI() {
       const result = decomposeZYZ(U);
       $('#matrix-original').innerHTML = matrixMarkup(U);
       if (!result.success) {
-        lastResult = null;
+        clearAnalysisVisuals(t('noCircuit'));
         analysisState = 'nonunitary';
         renderAnalysisStatus();
         showError(result.message);
-        $('#angle-list').innerHTML = '';
-        $('#matrix-reconstructed').textContent = '—';
-        $('#reconstruction-error').textContent = '—';
-        $('#circuit').innerHTML = `<span class="hint">${t('noCircuit')}</span>`;
         return result;
       }
       clearError();
@@ -250,6 +269,8 @@ export function initializeUI() {
       applyAnimationPath();
       return result;
     } catch (error) {
+      clearAnalysisVisuals(t('invalidCircuit'));
+      $('#matrix-original').textContent = '—';
       analysisState = 'invalid';
       renderAnalysisStatus();
       showError(error.message);

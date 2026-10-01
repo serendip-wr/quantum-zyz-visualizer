@@ -3,6 +3,7 @@ import { Complex, formatComplex, parseComplex } from '../js/complex.js';
 import { determinant2, identity2, isUnitary2, matrix2, matrixDistance2, multiply2, scale2 } from '../js/matrix.js';
 import { PRESET_GATES, composeZYZ, rotationAroundAxis, rotateVector, rx, ry, rz } from '../js/quantum.js';
 import { decomposeZYZ } from '../js/zyz.js';
+import { RotationAnimator, rotationOrbit } from '../js/bloch.js';
 
 const TOL = 1e-8;
 let passed = 0;
@@ -59,6 +60,34 @@ const arbitraryVector = rotateVector({ x: .2, y: -.3, z: Math.sqrt(.87) }, { x: 
 assert.ok(Math.abs(Math.hypot(arbitraryVector.x, arbitraryVector.y, arbitraryVector.z) - 1) < TOL,
   'arbitrary-axis Bloch rotation must preserve vector length');
 assert.throws(() => rotationAroundAxis(0, 0, 0, 1), /不能为零/, 'zero custom axis must be rejected');
+
+const orbitAxis = { x: 1, y: 2, z: 0 };
+const fullOrbit = rotationOrbit({ x: 0, y: 0, z: 1 }, orbitAxis);
+assert.equal(fullOrbit.length, 129, 'custom-axis orbit should sample the entire circle');
+assert.ok(Math.hypot(fullOrbit[0].x - fullOrbit.at(-1).x, fullOrbit[0].y - fullOrbit.at(-1).y, fullOrbit[0].z - fullOrbit.at(-1).z) < TOL,
+  'full orbit should close at its starting point');
+assert.ok(fullOrbit.every(point => Math.abs(Math.hypot(point.x, point.y, point.z) - 1) < TOL &&
+  Math.abs(point.x * orbitAxis.x + point.y * orbitAxis.y) < TOL),
+  'full orbit should stay on the Bloch sphere and perpendicular to its axis');
+assert.deepEqual(rotationOrbit({ x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: 1 }), [],
+  'a state on the rotation axis should have no circular orbit');
+const animator = new RotationAnimator({ setScene() {} });
+animator.steps = [{ axis: orbitAxis, angle: Math.PI / 3 }];
+animator.progress = .5;
+assert.equal(animator.state().orbit.length, 129, 'the full orbit should remain visible during playback');
+assert.ok(animator.state().trajectory.length < animator.state().orbit.length, 'the traveled arc should remain separate');
+animator.step = 1;
+assert.equal(animator.state().orbit.length, 129, 'the full orbit should remain visible after playback');
+assert.equal(animator.state().displayAxis, orbitAxis, 'the custom axis should remain visible after playback');
+animator.steps = [{ axis: 'z', angle: Math.PI / 2 }];
+animator.step = 0;
+assert.deepEqual(animator.state().orbit, [], 'the custom orbit should not appear on the ZYZ path');
+const emptyUpdates = [];
+const emptyScenes = [];
+const emptyAnimator = new RotationAnimator({ setScene(...scene) { emptyScenes.push(scene); } }, state => emptyUpdates.push(state));
+emptyAnimator.render();
+assert.equal(emptyScenes.at(-1)[1].length, 1, 'an invalid analysis should clear the old trajectory');
+assert.equal(emptyUpdates.at(-1).noSteps, true, 'an invalid analysis should disable animation controls');
 
 function verify(name, U) {
   assert.ok(isUnitary2(U, TOL), `${name} should be unitary`);
